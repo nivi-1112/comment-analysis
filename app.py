@@ -44,16 +44,19 @@ if st.button("Analyze"):
         # Topic Modeling
         vectorizer = CountVectorizer(stop_words="english", max_features=1000)
         dtm = vectorizer.fit_transform(df["Clean"])
-        lda = LatentDirichletAllocation(n_components=3, random_state=42)
-        lda.fit(dtm)
 
-        feature_names = vectorizer.get_feature_names_out()
-        topics = []
-        for topic in lda.components_:
-            top_words = [feature_names[i] for i in topic.argsort()[-5:]]
-            topics.append(", ".join(top_words))
-
-        df["Topic"] = [topics[i.argmax()] for i in lda.transform(dtm)]
+        if dtm.shape[0] >= 3 and dtm.shape[1] >= 1:
+            lda = LatentDirichletAllocation(n_components=3, random_state=42)
+            lda.fit(dtm)
+            feature_names = vectorizer.get_feature_names_out()
+            topics = []
+            for topic in lda.components_:
+                top_words = [feature_names[i] for i in topic.argsort()[-5:]]
+                topics.append(", ".join(top_words))
+            df["Topic"] = [topics[i.argmax()] for i in lda.transform(dtm)]
+        else:
+            df["Topic"] = "Not enough data"
+            topics = ["Not enough data for topic modeling"]
 
         # Show Table
         st.subheader("📊 Analysis Results")
@@ -66,13 +69,17 @@ if st.button("Analyze"):
         st.subheader("🔍 Emotion Distribution")
         st.bar_chart(df["Emotion"].value_counts())
 
+        # Word Cloud
         st.subheader("☁️ Word Cloud")
         text = " ".join(df["Clean"])
-        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-        plt.figure(figsize=(10, 5))
-        plt.imshow(wordcloud, interpolation='bilinear')
-        plt.axis("off")
-        st.pyplot(plt)
+        if text.strip():
+            wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+            plt.figure(figsize=(10, 5))
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis("off")
+            st.pyplot(plt)
+        else:
+            st.warning("Not enough valid words to generate a word cloud.")
 
         st.subheader("💡 Topics Identified")
         st.write(topics)
